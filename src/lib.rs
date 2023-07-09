@@ -1,5 +1,6 @@
 use rand::prelude::*;
 use std::{thread, time::Instant};
+use thousands::Separable;
 
 pub struct AnnealingOptions {
     pub time_limit: f64,
@@ -188,11 +189,11 @@ fn do_annealing<A: Annealer>(
 
             if (timer.elapsed() - prev_heart_beat).as_secs_f64() >= 10.0 {
                 progress!(
-                    "best = {:16.3}, best valid = {:16.3}, cur = {:16.3}, temp = {:16.3}, progress: {:6.2}% ⛔",
-                    best_score,
-                    valid_best_score,
-                    cur_score,
-                    temp,
+                    "best = {:>16}, best valid = {:>16}, cur = {:>16}, temp = {:>16}, progress: {:6.2}% ⛔",
+                    format!("{:.1}", best_score).separate_with_commas(),
+                    format!("{:.1}", valid_best_score).separate_with_commas(),
+                    format!("{:.1}", cur_score).separate_with_commas(),
+                    format!("{:.1}", temp).separate_with_commas(),
                     progress_ratio * 100.0
                 );
                 prev_heart_beat = timer.elapsed();
@@ -247,14 +248,14 @@ fn do_annealing<A: Annealer>(
 
         if best_updated || best_valid_updated {
             progress!(
-                    "best = {:16.3}, best valid = {:16.3}, cur = {:16.3}, temp = {:16.3}, progress: {:6.2}% {}",
-                    best_score,
-                    valid_best_score,
-                    cur_score,
-                    temp,
-                    progress_ratio * 100.0,
-                    if best_valid_updated { "✅" } else { "🐴" }
-                );
+                "best = {:>16}, best valid = {:>16}, cur = {:>16}, temp = {:>16}, progress: {:6.2}% {}",
+                format!("{:.1}", best_score).separate_with_commas(),
+                format!("{:.1}", valid_best_score).separate_with_commas(),
+                format!("{:.1}", cur_score).separate_with_commas(),
+                format!("{:.1}", temp).separate_with_commas(),
+                progress_ratio * 100.0,
+                if best_valid_updated { "✅" } else { "🐴" }
+            );
             prev_heart_beat = timer.elapsed();
         }
     }
