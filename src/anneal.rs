@@ -4,7 +4,7 @@ use rand::{Rng as _, RngCore, SeedableRng};
 
 use crate::{
     AnnealingContext, AnnealingParams, AnnealingResult, AnnealingStrategy, Environment,
-    EnvironmentStrategy, ProgressMonitor, State, StateInitializer, StateNeighbor,
+    EnvironmentStrategy, ProgressMonitor, State, StateInitializer, StateNeighbour,
 };
 
 struct ThreadAnnealingParams<'a, AS, S, M, R> {
@@ -88,22 +88,22 @@ where
 
         params.progress_monitor.progress(&current_state, &context);
 
-        let neighbor = params
+        let neighbour = params
             .annealing_strategy
             .neighbour(current_state, &context, &mut rng);
-        let neighbor_energy = neighbor.energy();
+        let neighbour_energy = neighbour.energy();
 
-        let accept = if neighbor_energy < current_energy {
+        let accept = if neighbour_energy < current_energy {
             true
         } else {
             let acceptance_probability =
-                (-(neighbor_energy - current_energy) / context.environment.temperature).exp();
+                (-(neighbour_energy - current_energy) / context.environment.temperature).exp();
             rng.gen::<f64>() < acceptance_probability
         };
 
         if accept {
-            current_state = neighbor.accept();
-            current_energy = neighbor_energy;
+            current_state = neighbour.accept();
+            current_energy = neighbour_energy;
             if current_energy < context.best_energy {
                 if let Some(solution) = current_state.as_solution() {
                     best_solution = Some(solution);
@@ -111,7 +111,7 @@ where
                 }
             }
         } else {
-            current_state = neighbor.revert();
+            current_state = neighbour.revert();
         }
 
         iterations += 1;

@@ -21,7 +21,7 @@ pub trait State: Send {
     fn as_solution(&self) -> Option<Self::Solution>;
 }
 
-pub trait StateNeighbor<S> {
+pub trait StateNeighbour<S> {
     fn energy(&self) -> f64;
     fn accept(self) -> S;
     fn revert(self) -> S;
@@ -31,7 +31,7 @@ pub trait AnnealingStrategy<S, R = SmallRng>: Sync
 where
     S: State,
 {
-    type Neighbour: StateNeighbor<S>;
+    type Neighbour: StateNeighbour<S>;
 
     fn neighbour(&self, state: S, context: &AnnealingContext, rng: &mut R) -> Self::Neighbour;
 }
@@ -193,12 +193,12 @@ mod tests {
         }
     }
 
-    struct TestNeighbor {
+    struct TestNeighbour {
         new_x: f64,
         old_x: f64,
     }
 
-    impl StateNeighbor<TestState> for TestNeighbor {
+    impl StateNeighbour<TestState> for TestNeighbour {
         fn energy(&self) -> f64 {
             energy(self.new_x)
         }
@@ -215,16 +215,16 @@ mod tests {
     struct TestStrategy;
 
     impl AnnealingStrategy<TestState> for TestStrategy {
-        type Neighbour = TestNeighbor;
+        type Neighbour = TestNeighbour;
 
         fn neighbour(
             &self,
             state: TestState,
             _context: &AnnealingContext,
             rng: &mut SmallRng,
-        ) -> TestNeighbor {
+        ) -> TestNeighbour {
             let dx = rng.gen_range(-1.0..=1.0);
-            TestNeighbor {
+            TestNeighbour {
                 new_x: state.x + dx,
                 old_x: state.x,
             }
