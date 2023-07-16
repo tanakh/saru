@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: Build and Test
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          profile: minimal
+          override: true
+
+      - name: Check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
