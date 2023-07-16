@@ -8,44 +8,77 @@ use rand::{
     RngCore, SeedableRng,
 };
 
+/// Holds extra information given to [`AnnealingStrategy`].
 pub struct AnnealingContext {
+    /// Energy of the best state the current thread has seen so far.
+    /// It is energy of the best state, not necessarily the best solution, so
+    /// it may represent an invalid solution.
     pub best_energy: f64,
     pub environment: Environment,
     pub thread_id: usize,
 }
 
+/// Represents a state of simulated annealing.
 pub trait State: Send {
     type Solution: Send;
 
+    /// Computes the energy of the state. This method must return very quickly,
+    /// preferably just by returning a cached value.
     fn energy(&self) -> f64;
+
+    /// Creates a solution from the state. It should return [`None`] if the
+    /// state corresponds to an invalid solution.
     fn as_solution(&self) -> Option<Self::Solution>;
 }
 
+/// Represents a neighbour of an annealing state.
+///
+/// It is similar to [`State`] as both should be able to compute energy, but
+/// `StateNeighbour` is meant to converted back to [`State`] immediately either
+/// by `accept` or `revert`.
 pub trait StateNeighbour<S> {
+    /// Computes the energy of the state. This method must return very quickly,
+    /// preferably just by returning a cached value.
     fn energy(&self) -> f64;
+
+    /// Accepts this neighbour and returns the corresponding state.
     fn accept(self) -> S;
+
+    /// Rejects this neighbour and returns the original state.
     fn revert(self) -> S;
 }
 
+/// Defines neighbors of an annealing state and how to transition among them.
 pub trait AnnealingStrategy<S, R = SmallRng>: Sync
 where
     S: State,
 {
     type Neighbour: StateNeighbour<S>;
 
+    /// Randomly chooses a neighbour of the given state.
     fn neighbour(&self, state: S, context: &AnnealingContext, rng: &mut R) -> Self::Neighbour;
 }
 
+/// Represents the status of simulated annealing at a point of time.
 #[derive(Copy, Clone, Debug)]
 pub struct Environment {
+    /// A floating-point value in the range of `[0, 1)` indicating the progress
+    /// of the simulated annealing process.
     pub progress_ratio: f64,
+
+    /// The current temperature of the simulated annealing process.
     pub temperature: f64,
 }
 
+/// Computes [`Environment`]. Also known as a cooling strategy.
 pub trait EnvironmentStrategy {
+    /// Computes the current [`Environment`]. It should return [`None`] when the
+    /// simulated annealing process has finished.
     fn environment(&self) -> Option<Environment>;
 }
 
+/// An implementation of [`EnvironmentStrategy`] that cools down the temperature
+/// exponentially for a fixed time limit.
 pub struct ExponentialCoolingStrategy {
     initial_temperature: f64,
     final_temperature: f64,
@@ -82,6 +115,8 @@ impl EnvironmentStrategy for ExponentialCoolingStrategy {
     }
 }
 
+/// An implementation of [`EnvironmentStrategy`] that cools down the temperature
+/// linearly for a fixed time limit.
 pub struct LinearCoolingStrategy {
     initial_temperature: f64,
     final_temperature: f64,
@@ -118,20 +153,37 @@ impl EnvironmentStrategy for LinearCoolingStrategy {
     }
 }
 
+/// Responsible for generating initial [`State`]s for simulated annealing.
+///
+/// A single `StateInitializer` is shared to generate initial states for all
+/// threads, so it must implement [`Sync`].
 pub trait StateInitializer<S, R = StdRng>: Sync {
+    /// Generates an initial state for a simulated annealing thread.
     fn generate_initial_state(&self, rng: &mut R) -> S;
 }
 
+/// Monitors the progress of annealing threads.
+///
+/// On every iteration, every annealing thread calls `ProgressMonitor` to notify
+/// it the current state. `ProgressMonitor` may report to users. Note that an
+/// annealing thread is blocked until `ProgressMonitor` returns, so its
+/// implementations should try to return very quickly in most calls, e.g. by
+/// only inspecting the given state on every N calls.
+///
+/// A single `ProgressMonitor` is shared among all annealing threads, so it must
+/// implement [`Sync`].
 pub trait ProgressMonitor<S>: Sync {
     fn progress(&self, state: &S, context: &AnnealingContext);
 }
 
+/// An implementation of [`ProgressMonitor`] that does nothing.
 pub struct NullProgressMonitor;
 
 impl<S> ProgressMonitor<S> for NullProgressMonitor {
     fn progress(&self, _state: &S, _context: &AnnealingContext) {}
 }
 
+/// A result of simulated annealing returned by [`anneal`].
 pub struct AnnealingResult<S>
 where
     S: State,
@@ -142,6 +194,7 @@ where
     pub total_iterations: u64,
 }
 
+/// Parameters to [`anneal`].
 pub struct AnnealingParams<AS, ES, SI, PM, RR> {
     pub annealing_strategy: AS,
     pub environment_strategy: ES,
@@ -151,6 +204,7 @@ pub struct AnnealingParams<AS, ES, SI, PM, RR> {
     pub threads: usize,
 }
 
+/// Runs simulated annealing.
 pub fn anneal<S, AS, ES, SI, PM, RR, TR>(
     params: AnnealingParams<AS, ES, SI, PM, RR>,
 ) -> AnnealingResult<S>
